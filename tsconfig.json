@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		/* Basic Options */
+		"target": "es2017",
+		"module": "commonjs",
+		/* Strict Type-Checking Options */
+		"strict": true,
+		"noUnusedParameters": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noEmitHelpers": true,
+		"removeComments": true,
+		/* Module Resolution Options */
+		"moduleResolution": "node",
+		"baseUrl": ".",
+		"paths": {
+			"*": ["node_modules/*"]
+		},
+		"types": ["node", "aws-lambda"]
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": ["node_modules"]
+}

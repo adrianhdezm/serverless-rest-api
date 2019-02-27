@@ -1,0 +1,18 @@
+{
+	"defaultSeverity": "error",
+	"extends": ["tslint:latest", "tslint-config-prettier"],
+	"jsRules": {},
+	"rules": {
+		"quotemark": [true, "single"],
+		"indent": [true, "tabs", 2],
+		"member-access": [true, "no-public"],
+		"trailing-comma": [true, { "multiline": "never", "singleline": "never", "esSpecCompliant": true }],
+		"no-implicit-dependencies": [true, "dev"],
+		"curly": [true, "as-needed"],
+		"no-console": [false]
+	},
+	"rulesDirectory": [],
+	"linterOptions": {
+		"exclude": ["**/node_modules/**"]
+	}
+}
