@@ -33,6 +33,26 @@ Resources:
             Auth:
               Authorizer: NONE
 
+  BulkWriteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 1024
+      Timeout: 120
+      Handler: index.handleBulkWrite
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Store
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref Store
+      Events:
+        BulkWriteOperation:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /import/{className}
+            Method: POST
+
   QueryFunction:
     Type: AWS::Serverless::Function
     Properties:
