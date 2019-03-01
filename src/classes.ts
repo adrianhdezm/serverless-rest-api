@@ -8,52 +8,53 @@ import {
 import { createAPIResponse } from './utils/formatters';
 import { validClassName, validObjectId } from './utils/validators';
 
-export async function handleQuery(event: AWSLambda.APIGatewayProxyEvent) {
+export async function handleMultipleObjects(event: AWSLambda.APIGatewayProxyEvent) {
 	const className: string = event.pathParameters!.className || '';
-	const objectId: string = event.pathParameters!.objectId || '';
 
 	try {
 		if (!validClassName(className)) throw new Error('INVALID INPUT');
-
-		if (validObjectId(objectId)) {
-			const data = await getObject(objectId);
-			return createAPIResponse(200, data);
-		} else if (objectId === '') {
-			const data = await getAllObjects(className);
-			return createAPIResponse(200, data);
-		} else throw new Error('INVALID INPUT');
+		switch (event.httpMethod) {
+			case 'GET':
+				return createAPIResponse(200, await getAllObjects(className));
+			case 'PATCH':
+				if (!event.body) throw new Error('INVALID INPUT');
+				const objects = JSON.parse(event.body);
+				if (!objects.length) throw new Error('INVALID INPUT');
+				for (const attrs of objects) await createObject(className, attrs);
+				return createAPIResponse(204, '');
+			default:
+				throw new Error(`UNSUPPORTED METHOD: ${event.httpMethod}`);
+		}
 	} catch (error) {
 		return createAPIResponse(500, error.toString());
 	}
 }
 
-export async function handleWrite(event: AWSLambda.APIGatewayProxyEvent) {
+export async function handleSingleObject(event: AWSLambda.APIGatewayProxyEvent) {
 	const className: string = event.pathParameters!.className || '';
 	const objectId: string = event.pathParameters!.objectId || '';
 	const attrs = JSON.parse(event.body as string);
 
 	try {
-		let data = null;
 		if (!validClassName(className)) throw new Error('INVALID INPUT');
-
 		switch (event.httpMethod) {
+			case 'GET':
+				if (!validObjectId(objectId))
+					throw new Error('INVALID INPUT');
+				return createAPIResponse(200, await getObject(objectId));
+
 			case 'PUT':
 				if (!validObjectId(objectId) || !event.body)
 					throw new Error('INVALID INPUT');
-
-				data = await updateObject(objectId, attrs);
-				return createAPIResponse(200, data);
+				return createAPIResponse(200, await updateObject(objectId, attrs));
 
 			case 'POST':
 				if (!event.body) throw new Error('INVALID INPUT');
+				return createAPIResponse(201, await createObject(className, attrs));
 
-				data = await createObject(className, attrs);
-				return createAPIResponse(201, data);
 			case 'DELETE':
 				if (!validObjectId(objectId)) throw new Error('INVALID INPUT');
-
-				data = await deleteObject(objectId);
-				return createAPIResponse(200, data);
+				return createAPIResponse(200, await deleteObject(objectId));
 
 			default:
 				throw new Error(`UNSUPPORTED METHOD: ${event.httpMethod}`);
