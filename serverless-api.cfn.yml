@@ -36,8 +36,8 @@ Resources:
   BulkWriteFunction:
     Type: AWS::Serverless::Function
     Properties:
-      MemorySize: 1024
-      Timeout: 120
+      MemorySize: 128
+      Timeout: 3
       Handler: index.handleBulkWrite
       Policies:
         - DynamoDBCrudPolicy:

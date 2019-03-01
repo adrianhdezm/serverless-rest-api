@@ -12,7 +12,6 @@ const tableName = process.env.TABLE_NAME || '';
 
 async function* scanPaginator(className: string) {
 	let exclusiveStartKey = null;
-	let page = 0;
 
 	const defaultParams: DynamoDB.DocumentClient.ScanInput = {
 		ExpressionAttributeNames: {
@@ -24,23 +23,23 @@ async function* scanPaginator(className: string) {
 		FilterExpression: '#type = :type',
 		TableName: tableName
 	};
-	if (exclusiveStartKey || page === 0)
+	do
 		try {
 			const params = exclusiveStartKey ? { ...defaultParams, ExclusiveStartKey: exclusiveStartKey } : defaultParams;
 			const data: DynamoDB.DocumentClient.ScanOutput = await dynamo.scan(params).promise();
 			if (!data.hasOwnProperty('Items')) throw new Error('INTERNAL SYSTEM ERROR');
 			exclusiveStartKey = data.LastEvaluatedKey ? data.LastEvaluatedKey : null;
-			page++;
 			yield data.Items;
 		} catch (error) {
 			return Promise.reject(error);
 		}
+	while (exclusiveStartKey);
 }
 
 export async function getAllObjects(className: string) {
 	try {
-		let results: DynamoDB.DocumentClient.AttributeMap[] = [];
-		for await (const item of scanPaginator(className)) if (item) results = results.concat(item);
+		const results: DynamoDB.DocumentClient.AttributeMap[] = [];
+		for await (const page of scanPaginator(className)) results.push(...page);
 		return results;
 	} catch (error) {
 		return Promise.reject(error);
