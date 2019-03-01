@@ -8,8 +8,13 @@ if (process.env.AWS_SAM_LOCAL) options.endpoint = 'http://dynamodb:8000';
 const dynamo = new DynamoDB.DocumentClient(options);
 const tableName = process.env.TABLE_NAME || '';
 
-export async function getAllObjects(className: string) {
-	const params: DynamoDB.DocumentClient.ScanInput = {
+(Symbol as any).asyncIterator = Symbol.asyncIterator || Symbol.for('Symbol.asyncIterator');
+
+async function* scanPaginator(className: string) {
+	let exclusiveStartKey = null;
+	let page = 0;
+
+	const defaultParams: DynamoDB.DocumentClient.ScanInput = {
 		ExpressionAttributeNames: {
 			'#type': 'type'
 		},
@@ -19,27 +24,33 @@ export async function getAllObjects(className: string) {
 		FilterExpression: '#type = :type',
 		TableName: tableName
 	};
+	if (exclusiveStartKey || page === 0)
+		try {
+			const params = exclusiveStartKey ? { ...defaultParams, ExclusiveStartKey: exclusiveStartKey } : defaultParams;
+			const data: DynamoDB.DocumentClient.ScanOutput = await dynamo.scan(params).promise();
+			if (!data.hasOwnProperty('Items')) throw new Error('INTERNAL SYSTEM ERROR');
+			exclusiveStartKey = data.LastEvaluatedKey ? data.LastEvaluatedKey : null;
+			page++;
+			yield data.Items;
+		} catch (error) {
+			return Promise.reject(error);
+		}
+}
 
+export async function getAllObjects(className: string) {
 	try {
-		const data: DynamoDB.DocumentClient.ScanOutput = await dynamo
-			.scan(params)
-			.promise();
-
-		if (!data.hasOwnProperty('Items')) throw new Error('INTERNAL SYSTEM ERROR');
-		return data.Items as DynamoDB.DocumentClient.ItemList;
+		let results: DynamoDB.DocumentClient.AttributeMap[] = [];
+		for await (const item of scanPaginator(className)) if (item) results = results.concat(item);
+		return results;
 	} catch (error) {
 		return Promise.reject(error);
 	}
 }
 
-export async function createObject(
-	className: string,
-	attrs: DynamoDB.DocumentClient.AttributeMap
-) {
+export async function createObject(className: string, attrs: DynamoDB.DocumentClient.AttributeMap) {
 	const createDate = new Date();
 
-	const chars =
-		'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + '0123456789';
+	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + '0123456789';
 
 	const objectId = randomBytes(8).reduce((id, byte) => {
 		id += chars[byte % chars.length];
@@ -76,9 +87,7 @@ export async function getObject(objectId: string) {
 	};
 
 	try {
-		const data: DynamoDB.DocumentClient.GetItemOutput = await dynamo
-			.get(params)
-			.promise();
+		const data: DynamoDB.DocumentClient.GetItemOutput = await dynamo.get(params).promise();
 
 		if (!data.hasOwnProperty('Item')) throw new Error('INTERNAL SYSTEM ERROR');
 
@@ -98,33 +107,22 @@ export async function deleteObject(objectId: string) {
 	};
 
 	try {
-		const data: DynamoDB.DocumentClient.DeleteItemOutput = await dynamo
-			.delete(params)
-			.promise();
+		const data: DynamoDB.DocumentClient.DeleteItemOutput = await dynamo.delete(params).promise();
 
-		if (!data.hasOwnProperty('Attributes'))
-			throw new Error('INTERNAL SYSTEM ERROR');
+		if (!data.hasOwnProperty('Attributes')) throw new Error('INTERNAL SYSTEM ERROR');
 		return data.Attributes as DynamoDB.DocumentClient.AttributeMap;
 	} catch (error) {
 		return Promise.reject(error);
 	}
 }
 
-export async function updateObject(
-	objectId: string,
-	attrs: DynamoDB.DocumentClient.AttributeMap
-) {
+export async function updateObject(objectId: string, attrs: DynamoDB.DocumentClient.AttributeMap) {
 	const updateDate = new Date();
 
 	const notAllowedAttributes = ['objectId', 'type', 'createdAt', 'updatedAt'];
 
-	const filteredAttributes: DynamoDB.DocumentClient.AttributeMap = Object.keys(
-		attrs
-	).reduce(
-		(
-			attributeValues: DynamoDB.DocumentClient.ExpressionAttributeValueMap,
-			key: string
-		) => {
+	const filteredAttributes: DynamoDB.DocumentClient.AttributeMap = Object.keys(attrs).reduce(
+		(attributeValues: DynamoDB.DocumentClient.ExpressionAttributeValueMap, key: string) => {
 			if (notAllowedAttributes.includes(key)) return attributeValues;
 			attributeValues[key] = attrs[key];
 			return attributeValues;
@@ -137,10 +135,7 @@ export async function updateObject(
 		.join(', ')}, #updatedAt = :updatedAt`;
 
 	const expressionAttributeValues = Object.keys(filteredAttributes).reduce(
-		(
-			attributeValues: DynamoDB.DocumentClient.ExpressionAttributeValueMap,
-			key: string
-		) => {
+		(attributeValues: DynamoDB.DocumentClient.ExpressionAttributeValueMap, key: string) => {
 			attributeValues[`:${key}`] = filteredAttributes[key];
 			return attributeValues;
 		},
@@ -150,10 +145,7 @@ export async function updateObject(
 	);
 
 	const expressionAttributeNames = Object.keys(filteredAttributes).reduce(
-		(
-			attributeNames: DynamoDB.DocumentClient.ExpressionAttributeNameMap,
-			key: string
-		) => {
+		(attributeNames: DynamoDB.DocumentClient.ExpressionAttributeNameMap, key: string) => {
 			attributeNames[`#${key}`] = key;
 			return attributeNames;
 		},
@@ -174,12 +166,9 @@ export async function updateObject(
 	};
 
 	try {
-		const data: DynamoDB.DocumentClient.UpdateItemOutput = await dynamo
-			.update(params)
-			.promise();
+		const data: DynamoDB.DocumentClient.UpdateItemOutput = await dynamo.update(params).promise();
 
-		if (!data.hasOwnProperty('Attributes'))
-			throw new Error('INTERNAL SYSTEM ERROR');
+		if (!data.hasOwnProperty('Attributes')) throw new Error('INTERNAL SYSTEM ERROR');
 
 		return data.Attributes as DynamoDB.DocumentClient.AttributeMap;
 	} catch (error) {

@@ -1,14 +1,14 @@
 {
 	"compilerOptions": {
 		/* Basic Options */
-		"target": "es2017",
+		"target": "ES5",
 		"module": "commonjs",
 		/* Strict Type-Checking Options */
 		"strict": true,
 		"noUnusedParameters": true,
 		"noImplicitReturns": true,
 		"noUnusedLocals": true,
-		"noEmitHelpers": true,
+		"noEmitHelpers": false,
 		"removeComments": true,
 		/* Module Resolution Options */
 		"moduleResolution": "node",
@@ -16,7 +16,11 @@
 		"paths": {
 			"*": ["node_modules/*"]
 		},
-		"types": ["node", "aws-lambda"]
+		"types": ["node", "aws-lambda"],
+		"lib": [
+			"esnext"
+		],
+		"downlevelIteration": true
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules"]
