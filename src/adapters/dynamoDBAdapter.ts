@@ -36,11 +36,14 @@ async function* scanPaginator(className: string) {
 	while (exclusiveStartKey);
 }
 
-export async function getAllObjects(className: string) {
+export async function getAllObjects(className: string, limit: number, offset: number) {
+	const start = isNaN(offset) ? 0 : offset;
+	const end = start + (isNaN(limit) ? 200 : limit);
+
 	try {
 		const results: DynamoDB.DocumentClient.AttributeMap[] = [];
 		for await (const page of scanPaginator(className)) results.push(...page);
-		return results;
+		return results.slice(start, end);
 	} catch (error) {
 		return Promise.reject(error);
 	}
