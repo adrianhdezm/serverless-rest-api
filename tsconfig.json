@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		/* Basic Options */
-		"target": "ES5",
+		"target": "es5",
 		"module": "commonjs",
 		/* Strict Type-Checking Options */
 		"strict": true,
@@ -18,7 +18,13 @@
 		},
 		"types": ["node", "aws-lambda"],
 		"lib": [
-			"esnext"
+			"es5",
+			"es2015.iterable",
+			"es2015.promise",
+			"es2015.collection",
+			"es2015.symbol.wellknown",
+			"es2016.array.include",
+			"esnext.asynciterable"
 		],
 		"downlevelIteration": true
 	},
