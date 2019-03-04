@@ -36,6 +36,31 @@ async function* scanPaginator(className: string) {
 	while (exclusiveStartKey);
 }
 
+const sortingFunction = (
+	a: DynamoDB.DocumentClient.AttributeMap,
+	b: DynamoDB.DocumentClient.AttributeMap,
+	sortKeyPath: string,
+	sortOrder: number
+) => {
+	const [rootSortKey, nestedSortKey, ...restKeys] = sortKeyPath.split('.');
+	if (restKeys.length > 0) return 0; // Only one nested key to be sorted
+
+	if (a.hasOwnProperty(rootSortKey) && b.hasOwnProperty(rootSortKey)) {
+		const valueA = a[rootSortKey];
+		const valueB = b[rootSortKey];
+
+		if (valueA.hasOwnProperty(nestedSortKey) && valueB.hasOwnProperty(nestedSortKey)) {
+			if (valueA[nestedSortKey] > valueB[nestedSortKey]) return sortOrder;
+			if (valueA[nestedSortKey] < valueB[nestedSortKey]) return -sortOrder;
+		}
+
+		if (valueA > valueB) return sortOrder;
+		if (valueA < valueB) return -sortOrder;
+	}
+	// values must be equal
+	return 0;
+};
+
 export async function queryObjects(className: string, skip: number, limit: number, order: string) {
 	const start = isNaN(skip) ? 0 : skip;
 	const end = start + (isNaN(limit) ? 200 : limit);
@@ -51,18 +76,9 @@ export async function queryObjects(className: string, skip: number, limit: numbe
 		const data: DynamoDB.DocumentClient.AttributeMap[] = [];
 		for await (const page of scanPaginator(className)) data.push(...page);
 
-		const results = Object.keys(sortMap).reduce((items, sortKey) => {
-			const sortOrder = sortMap[sortKey];
-			return items.sort((a, b) => {
-				if (a.hasOwnProperty(sortKey) && b.hasOwnProperty(sortKey)) {
-					const valueA = a[sortKey];
-					const valueB = b[sortKey];
-					if (valueA > valueB) return sortOrder;
-					if (valueA < valueB) return -sortOrder;
-				}
-				// values must be equal
-				return 0;
-			});
+		const results = Object.keys(sortMap).reduce((items, sortKeyPath) => {
+			const sortOrder = sortMap[sortKeyPath];
+			return items.sort((a, b) => sortingFunction(a, b, sortKeyPath, sortOrder));
 		}, data);
 
 		return results.slice(start, end);
