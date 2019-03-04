@@ -36,13 +36,35 @@ async function* scanPaginator(className: string) {
 	while (exclusiveStartKey);
 }
 
-export async function getAllObjects(className: string, limit: number, offset: number) {
-	const start = isNaN(offset) ? 0 : offset;
+export async function queryObjects(className: string, skip: number, limit: number, order: string) {
+	const start = isNaN(skip) ? 0 : skip;
 	const end = start + (isNaN(limit) ? 200 : limit);
 
+	const sortMap: { [name: string]: number } = order.split(',').reduce((fields: { [name: string]: number }, field) => {
+		if (field.length > 1)
+			if (field[0] === '-') fields[field.slice(1)] = -1;
+			else fields[field] = 1;
+		return fields;
+	}, {});
+
 	try {
-		const results: DynamoDB.DocumentClient.AttributeMap[] = [];
-		for await (const page of scanPaginator(className)) results.push(...page);
+		const data: DynamoDB.DocumentClient.AttributeMap[] = [];
+		for await (const page of scanPaginator(className)) data.push(...page);
+
+		const results = Object.keys(sortMap).reduce((items, sortKey) => {
+			const sortOrder = sortMap[sortKey];
+			return items.sort((a, b) => {
+				if (a.hasOwnProperty(sortKey) && b.hasOwnProperty(sortKey)) {
+					const valueA = a[sortKey];
+					const valueB = b[sortKey];
+					if (valueA > valueB) return sortOrder;
+					if (valueA < valueB) return -sortOrder;
+				}
+				// values must be equal
+				return 0;
+			});
+		}, data);
+
 		return results.slice(start, end);
 	} catch (error) {
 		return Promise.reject(error);

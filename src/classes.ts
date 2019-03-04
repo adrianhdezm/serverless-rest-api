@@ -1,4 +1,4 @@
-import { createObject, deleteObject, getAllObjects, getObject, updateObject } from './adapters/dynamoDBAdapter';
+import { createObject, deleteObject, getObject, queryObjects, updateObject } from './adapters/dynamoDBAdapter';
 import { createAPIResponse } from './utils/formatters';
 import { validClassName, validObjectId } from './utils/validators';
 
@@ -9,9 +9,15 @@ export async function handleMultipleObjects(event: AWSLambda.APIGatewayProxyEven
 		if (!validClassName(className)) throw new Error('INVALID INPUT');
 		switch (event.httpMethod) {
 			case 'GET':
-				const limit = event.queryStringParameters!.limit || '';
-				const offset = event.queryStringParameters!.offset || '';
-				return createAPIResponse(200, await getAllObjects(className, parseInt(limit, 10), parseInt(offset, 10)));
+				let limit = '';
+				let skip = '';
+				let order = '';
+				if(event.queryStringParameters) {
+					if (event.queryStringParameters.hasOwnProperty('limit')) limit = event.queryStringParameters.limit;
+					if (event.queryStringParameters.hasOwnProperty('skip')) skip = event.queryStringParameters.skip;
+					if (event.queryStringParameters.hasOwnProperty('order')) order = event.queryStringParameters.order;
+				}
+				return createAPIResponse(200, await queryObjects(className, parseInt(skip, 10), parseInt(limit, 10), order ));
 			case 'PATCH':
 				if (!event.body) throw new Error('INVALID INPUT');
 				const objects = JSON.parse(event.body);
