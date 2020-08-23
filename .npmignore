@@ -1,0 +1,9 @@
+tests/*
+src/*
+events/*
+templates/*
+.eslintrc
+.node-version
+.prettierrc
+jest.config.js
+tsconfig.json

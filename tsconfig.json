@@ -1,33 +1,14 @@
 {
-	"compilerOptions": {
-		/* Basic Options */
-		"target": "es5",
-		"module": "commonjs",
-		/* Strict Type-Checking Options */
-		"strict": true,
-		"noUnusedParameters": true,
-		"noImplicitReturns": true,
-		"noUnusedLocals": true,
-		"noEmitHelpers": false,
-		"removeComments": true,
-		/* Module Resolution Options */
-		"moduleResolution": "node",
-		"baseUrl": ".",
-		"paths": {
-			"*": ["node_modules/*"]
-		},
-		"types": ["node", "aws-lambda"],
-		"lib": [
-			"es5",
-			"es2015.iterable",
-			"es2015.promise",
-			"es2015.collection",
-			"es2015.symbol.wellknown",
-			"es2016.array.include",
-			"esnext.asynciterable"
-		],
-		"downlevelIteration": true
-	},
-	"include": ["src/**/*.ts"],
-	"exclude": ["node_modules"]
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "commonjs",
+    "lib": ["ES2019"],
+    "outDir": "dist",
+    "strict": true,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
+    "moduleResolution": "node"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
 }
