@@ -1,12 +1,13 @@
-export async function lambdaHandler(event: AWSLambda.APIGatewayProxyEvent, context: AWSLambda.Context) {
+import { APIGatewayProxyEvent, Context } from 'aws-lambda';
+
+import { createAPIResponse } from './helpers/response.helpers';
+
+export async function lambdaHandler(event: APIGatewayProxyEvent, context: Context) {
   console.log(`Function name: ${context.functionName}`);
   const name: string = event.queryStringParameters?.name || 'World';
 
   try {
-    const response = {
-      statusCode: 200,
-      body: JSON.stringify({ message: `Hello ${name}!` })
-    };
+    const response = createAPIResponse(`Hello ${name}!`);
     return response;
   } catch (err) {
     console.log(err);
